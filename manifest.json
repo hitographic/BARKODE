@@ -1,6 +1,6 @@
 {
-  "name": "Scanner Barcode IndoFood",
-  "short_name": "Scanner",
+  "name": "BarKode",
+  "short_name": "BarKode",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f1f5f9",
