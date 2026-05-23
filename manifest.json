@@ -8,7 +8,7 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2415/2415286.png",
+      "src": "./logo/Logo Barkode.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
