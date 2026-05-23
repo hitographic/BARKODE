@@ -116,25 +116,77 @@
         }
         .verification-box.success-box { display: block; background-color: #d1fae5; color: #065f46; border: 1px solid var(--success); }
         .verification-box.error-box { display: block; background-color: #fee2e2; color: #991b1b; border: 1px solid var(--error); }
+
+        /* Gaya Menu Tab & History */
+        .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+        .tab-btn { margin-top: 0; background-color: #e2e8f0; color: var(--text-main); flex: 1; border-radius: 8px; }
+        .tab-btn.active { background-color: var(--primary); color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .table-responsive { overflow-x: auto; margin: 15px 0; border: 1px solid var(--border); border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { padding: 10px; border-bottom: 1px solid var(--border); text-align: left; }
+        th { background: #f8fafc; font-weight: 600; }
+        
+        .search-box { margin-bottom: 15px; position: relative; }
+        .action-bar { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-top: 15px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2 style="text-align: center;">Scanner & Upload Bukti</h2>
+        <h2 style="text-align: center;">Scanner App</h2>
 
-        <!-- Area Scanner -->
-        <div id="reader"></div>
-
-        <!-- Form Input -->
-        <div class="form-group">
-            <label>Hasil Scan Barcode/QR:</label>
-            <input type="text" id="barcodeResult" readonly placeholder="Arahkan kamera ke Barcode">
+        <!-- Tab Navigation -->
+        <div class="tabs">
+            <button id="btn-tab-scanner" class="tab-btn active" onclick="switchTab('tab-scanner')">Scanner</button>
+            <button id="btn-tab-history" class="tab-btn" onclick="switchTab('tab-history')">Riwayat Hari Ini</button>
         </div>
 
-        <!-- Area Hasil Verifikasi -->
-        <div id="verificationResult" class="verification-box"></div>
+        <!-- Tab 1: Scanner -->
+        <div id="tab-scanner" class="tab-content active">
+            <div id="reader"></div>
+            <div class="form-group">
+                <label>Hasil Scan Barcode/QR:</label>
+                <input type="text" id="barcodeResult" readonly placeholder="Arahkan kamera ke Barcode">
+            </div>
+            <div id="verificationResult" class="verification-box"></div>
+            <div id="status"></div>
+        </div>
 
-        <div id="status"></div>
+        <!-- Tab 2: Riwayat Hari Ini -->
+        <div id="tab-history" class="tab-content">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Pencarian (Nama/Barcode)..." onkeyup="filterTable()">
+            </div>
+            <div class="table-responsive">
+                <table id="historyTable">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAllBtn" onchange="toggleSelectAll()"></th>
+                            <th>Waktu</th>
+                            <th>Material</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr><td colspan="4" style="text-align:center;">Memuat data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="action-bar">
+                <label>Kirim Data Terpilih via Email</label>
+                <div class="form-group" style="margin-bottom: 8px;">
+                    <input type="email" id="emailTo" placeholder="Alamat Email Tujuan">
+                </div>
+                <div class="form-group">
+                    <input type="text" id="emailSubject" placeholder="Subjek Email">
+                </div>
+                <button id="sendEmailBtn" onclick="sendSelectedEmail()">Kirim Email</button>
+                <div id="emailStatus" style="margin-top:10px; text-align:center; font-size:0.9rem; font-weight:bold;"></div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -156,6 +208,7 @@
 
         // Variabel untuk menampung data dari Google Sheets
         let masterData = [];
+        let todayHistoryData = []; // Untuk menampung data riwayat
 
         // Mengambil data master dari Google Sheets saat aplikasi pertama kali dibuka
         async function fetchMasterData() {
@@ -228,6 +281,137 @@
             }
         }
 
+        // --- FITUR RIWAYAT DAN TABS ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            document.getElementById('btn-' + tabId).classList.add('active');
+
+            if (tabId === 'tab-history') {
+                loadHistoryData();
+            }
+        }
+
+        async function loadHistoryData() {
+            const tbody = document.getElementById('historyBody');
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Memuat data dari server...</td></tr>';
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'fetch_today' })
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    todayHistoryData = result.data.reverse(); // Balik agar data terbaru di atas
+                    renderTable(todayHistoryData);
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="4" class="error">Gagal: ${result.message}</td></tr>`;
+                }
+            } catch (error) {
+                tbody.innerHTML = '<tr><td colspan="4" class="error">Koneksi terputus.</td></tr>';
+            }
+        }
+
+        function renderTable(dataArray) {
+            const tbody = document.getElementById('historyBody');
+            tbody.innerHTML = '';
+            document.getElementById('selectAllBtn').checked = false;
+
+            if (dataArray.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Belum ada data hari ini.</td></tr>';
+                return;
+            }
+
+            dataArray.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                // Menyimpan data asli dalam attribut data untuk keperluan kirim email
+                tr.innerHTML = `
+                    <td><input type="checkbox" class="row-checkbox" data-index="${index}"></td>
+                    <td style="font-size:0.75rem;">${row.timestamp}</td>
+                    <td><strong>${row.nama}</strong><br><span style="font-size:0.75rem; color:#64748b;">${row.barcode}</span></td>
+                    <td><span style="font-size:0.8rem; padding:2px 6px; border-radius:4px; background:${row.status === 'Tercatat Otomatis' ? '#d1fae5' : '#e2e8f0'};">${row.status}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterTable() {
+            const filterText = document.getElementById('searchInput').value.toLowerCase();
+            const filteredData = todayHistoryData.filter(row => {
+                return row.nama.toLowerCase().includes(filterText) || 
+                       row.barcode.toLowerCase().includes(filterText) ||
+                       row.status.toLowerCase().includes(filterText);
+            });
+            renderTable(filteredData);
+        }
+
+        function toggleSelectAll() {
+            const isChecked = document.getElementById('selectAllBtn').checked;
+            document.querySelectorAll('.row-checkbox').forEach(cb => {
+                cb.checked = isChecked;
+            });
+        }
+
+        async function sendSelectedEmail() {
+            const emailTo = document.getElementById('emailTo').value;
+            const subject = document.getElementById('emailSubject').value;
+            const emailStatus = document.getElementById('emailStatus');
+            const btn = document.getElementById('sendEmailBtn');
+
+            if (!emailTo || !subject) {
+                alert("Mohon isi email tujuan dan subjek terlebih dahulu."); return;
+            }
+
+            const selectedIndexes = Array.from(document.querySelectorAll('.row-checkbox:checked')).map(cb => cb.getAttribute('data-index'));
+            if (selectedIndexes.length === 0) {
+                alert("Pilih minimal satu data dari tabel untuk dikirim."); return;
+            }
+
+            const selectedData = selectedIndexes.map(idx => todayHistoryData[idx]);
+
+            btn.disabled = true;
+            btn.innerText = "Mengirim...";
+            emailStatus.innerHTML = "Sedang mengirim email...";
+            emailStatus.className = "";
+
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'send_email',
+                        emailTo: emailTo,
+                        subject: subject,
+                        tableData: selectedData
+                    })
+                });
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    emailStatus.innerHTML = "✅ Email berhasil terkirim!";
+                    emailStatus.className = "success";
+                    document.getElementById('emailTo').value = "";
+                    document.getElementById('emailSubject').value = "";
+                    document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+                    document.getElementById('selectAllBtn').checked = false;
+                } else {
+                    emailStatus.innerHTML = "❌ Gagal: " + result.message;
+                    emailStatus.className = "error";
+                }
+            } catch (error) {
+                emailStatus.innerHTML = "❌ Terjadi kesalahan jaringan.";
+                emailStatus.className = "error";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Kirim Email";
+            }
+        }
+
         async function autoSubmitData(barcodeText, namaMaterial) {
             isProcessing = true;
             const statusDiv = document.getElementById('status');
@@ -236,6 +420,7 @@
             statusDiv.className = '';
 
             const payload = {
+                action: 'scan',
                 barcodeText: barcodeText,
                 namaMaterial: namaMaterial,
                 base64Photo: "" // Dikosongkan karena tidak perlu foto lagi

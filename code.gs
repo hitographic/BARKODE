@@ -36,52 +36,91 @@ function doGet(e) {
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
-    var barcodeText = data.barcodeText;
-    var namaMaterial = data.namaMaterial || "";
-    var base64Photo = data.base64Photo;
-    var photoUrl = "";
-
-    // Jika ada foto, proses fotonya (sekarang menjadi opsional/dilewati)
-    if (base64Photo && base64Photo !== "") {
-      var decodedData = Utilities.base64Decode(base64Photo);
-      var blob = Utilities.newBlob(decodedData, 'image/jpeg', 'Scan_' + new Date().getTime() + '.jpg');
-      var folder = DriveApp.getFolderById(FOLDER_ID);
-      var file = folder.createFile(blob);
-      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      photoUrl = file.getUrl();
-    }
+    var action = data.action || 'scan'; // Default ke 'scan' jika tidak ada action
 
     // Buka Spreadsheet untuk mencatat histori scan
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    
-    // Asumsi: Histori log scan dicatat di sheet kedua. 
-    // Jika Anda hanya punya 1 sheet, ubah jadi ss.getSheets()[0]
-    // Dianjurkan buat Sheet/Tab baru bernama "Log_Scan" di Google Sheets Anda
     var sheetLog = ss.getSheetByName("Log_Scan"); 
     if (!sheetLog) { 
-      // Jika tab Log_Scan belum dibuat, gunakan tab pertama
       sheetLog = ss.getSheets()[0]; 
     }
 
-    var timestamp = new Date();
-    // Susunan Kolom Baru: [Waktu, Hasil Scan, Nama Material, Link Foto, Status]
-    sheetLog.appendRow([timestamp, barcodeText, namaMaterial, photoUrl, "Tercatat Otomatis"]);
+    if (action === 'scan') {
+      var barcodeText = data.barcodeText;
+      var namaMaterial = data.namaMaterial || "";
+      var base64Photo = data.base64Photo;
+      var photoUrl = "";
 
-    var response = {
-      status: 'success',
-      message: 'Data berhasil disimpan!',
-      photoUrl: photoUrl
-    };
-    
-    return ContentService.createTextOutput(JSON.stringify(response))
-      .setMimeType(ContentService.MimeType.JSON);
+      if (base64Photo && base64Photo !== "") {
+        var decodedData = Utilities.base64Decode(base64Photo);
+        var blob = Utilities.newBlob(decodedData, 'image/jpeg', 'Scan_' + new Date().getTime() + '.jpg');
+        var folder = DriveApp.getFolderById(FOLDER_ID);
+        var file = folder.createFile(blob);
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        photoUrl = file.getUrl();
+      }
+
+      var timestamp = new Date();
+      sheetLog.appendRow([timestamp, barcodeText, namaMaterial, photoUrl, "Tercatat Otomatis"]);
+
+      var response = { status: 'success', message: 'Data berhasil disimpan!' };
+      return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
+      
+    } else if (action === 'fetch_today') {
+      var rawData = sheetLog.getDataRange().getValues();
+      var displayData = sheetLog.getDataRange().getDisplayValues();
+      var today = new Date();
+      var resultData = [];
+      
+      // Looping data, mulai dari indeks 1 untuk melewati Header
+      for(var i = 1; i < rawData.length; i++) {
+        var rowDate = rawData[i][0];
+        if (rowDate instanceof Date) {
+          if (rowDate.getDate() === today.getDate() && 
+              rowDate.getMonth() === today.getMonth() && 
+              rowDate.getFullYear() === today.getFullYear()) {
+            
+            resultData.push({
+              timestamp: displayData[i][0],
+              barcode: displayData[i][1],
+              nama: displayData[i][2],
+              status: displayData[i][4]
+            });
+          }
+        }
+      }
+      
+      var response = { status: 'success', data: resultData };
+      return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
+
+    } else if (action === 'send_email') {
+      var emailTo = data.emailTo;
+      var subject = data.subject;
+      var tableData = data.tableData;
+
+      // Buat struktur tabel HTML
+      var htmlBody = "<h3 style='font-family: sans-serif;'>Laporan Scan Barcode</h3>";
+      htmlBody += "<table border='1' cellpadding='8' style='border-collapse: collapse; font-family: sans-serif; width: 100%;'>";
+      htmlBody += "<tr style='background-color: #f1f5f9;'><th>Waktu</th><th>Barcode</th><th>Nama Material</th><th>Status</th></tr>";
+      
+      for(var j = 0; j < tableData.length; j++) {
+        htmlBody += "<tr>";
+        htmlBody += "<td>" + tableData[j].timestamp + "</td>";
+        htmlBody += "<td>" + tableData[j].barcode + "</td>";
+        htmlBody += "<td>" + tableData[j].nama + "</td>";
+        htmlBody += "<td>" + tableData[j].status + "</td>";
+        htmlBody += "</tr>";
+      }
+      htmlBody += "</table>";
+
+      MailApp.sendEmail({ to: emailTo, subject: subject, htmlBody: htmlBody });
+
+      var response = { status: 'success', message: 'Email berhasil dikirim!' };
+      return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
+    }
 
   } catch (error) {
-    var response = {
-      status: 'error',
-      message: error.toString()
-    };
-    return ContentService.createTextOutput(JSON.stringify(response))
-      .setMimeType(ContentService.MimeType.JSON);
+    var response = { status: 'error', message: error.toString() };
+    return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
   }
 }
