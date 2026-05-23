@@ -9,15 +9,15 @@ function doGet(e) {
     // Asumsi: Data Master Material ada di sheet pertama (kiri sendiri)
     // Pastikan Kolom A = Nama Material, Kolom B = Kode Barcode
     var sheet = ss.getSheets()[0]; 
-    var data = sheet.getDataRange().getValues();
+    var data = sheet.getDataRange().getDisplayValues(); // Gunakan getDisplayValues agar angka dibaca sebagai teks persis seperti di layar
     
     var masterData = [];
     // Looping dari baris ke-2 (indeks 1) untuk melewati baris judul (header)
     for (var i = 1; i < data.length; i++) {
       if (data[i][0] && data[i][1]) { // Pastikan baris tidak kosong
         masterData.push({
-          nama: String(data[i][0]),
-          kode: String(data[i][1])
+          nama: String(data[i][0]).trim(), // Bersihkan spasi berlebih
+          kode: String(data[i][1]).trim()  // Bersihkan spasi berlebih
         });
       }
     }

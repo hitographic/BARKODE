@@ -168,11 +168,11 @@
             "reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
 
         function onScanSuccess(decodedText, decodedResult) {
-            document.getElementById('barcodeResult').value = decodedText;
+            document.getElementById('barcodeResult').value = decodedText.trim();
             
             // Proses Verifikasi
             const verificationDiv = document.getElementById('verificationResult');
-            const match = masterData.find(item => item.kode === decodedText);
+            const match = masterData.find(item => item.kode === decodedText.trim());
 
             if (match) {
                 verificationDiv.innerHTML = `✅ <strong>Verified:</strong> ${match.nama}`;
