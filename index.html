@@ -6,45 +6,112 @@
     <title>Scanner Barcode & Foto Bukti</title>
     <!-- Library HTML5-QRCode -->
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #0ea5e9;
+            --primary-hover: #0284c7;
+            --success: #10b981;
+            --error: #ef4444;
+            --surface: #ffffff;
+            --background: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --radius: 12px;
+        }
+        
         body { 
-            font-family: Arial, sans-serif; 
-            padding: 20px; 
-            max-width: 500px; 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+            padding: 20px 16px; 
+            max-width: 480px; 
             margin: auto; 
-            background-color: #f9f9f9;
+            background-color: var(--background);
+            color: var(--text-main);
         }
         .container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: var(--surface);
+            padding: 24px;
+            border-radius: var(--radius);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.05);
         }
-        #reader { width: 100%; margin-bottom: 20px; }
+        h2 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 24px;
+            font-size: 1.5rem;
+            color: var(--text-main);
+        }
+        #reader { 
+            width: 100%; 
+            margin-bottom: 20px; 
+            border: 2px dashed var(--border) !important;
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        #reader button {
+            background-color: var(--primary);
+            color: white;
+            border-radius: 6px;
+            padding: 8px 16px;
+            border: none;
+            cursor: pointer;
+            margin: 10px;
+        }
         .form-group { margin-bottom: 15px; }
-        label { font-weight: bold; display: block; margin-bottom: 5px;}
+        label { 
+            font-weight: 600; 
+            display: block; 
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
         input[type="text"], input[type="file"] { 
             width: 100%; 
-            padding: 10px; 
+            padding: 12px; 
             box-sizing: border-box;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus, input[type="file"]:focus {
+            outline: none;
+            border-color: var(--primary);
         }
         button { 
             width: 100%; 
-            padding: 12px; 
-            background-color: #28a745; 
+            padding: 14px; 
+            background-color: var(--primary); 
             color: white; 
             border: none; 
-            border-radius: 4px; 
+            border-radius: 8px; 
             font-size: 16px; 
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 600;
+            transition: background-color 0.2s;
+            margin-top: 10px;
+        }
+        button:hover:not(:disabled) {
+            background-color: var(--primary-hover);
         }
         button:disabled { background-color: #cccccc; cursor: not-allowed; }
         #status { margin-top: 15px; font-weight: bold; text-align: center; }
-        .success { color: #28a745; }
-        .error { color: #dc3545; }
+        .success { color: var(--success); }
+        .error { color: var(--error); }
+        
+        /* Gaya untuk Box Verifikasi */
+        .verification-box { 
+            padding: 12px; 
+            margin-bottom: 15px; 
+            border-radius: 8px; 
+            display: none; 
+            font-size: 0.95rem; 
+            text-align: center; 
+        }
+        .verification-box.success-box { display: block; background-color: #d1fae5; color: #065f46; border: 1px solid var(--success); }
+        .verification-box.error-box { display: block; background-color: #fee2e2; color: #991b1b; border: 1px solid var(--error); }
     </style>
 </head>
 <body>
@@ -60,6 +127,9 @@
             <input type="text" id="barcodeResult" readonly placeholder="Arahkan kamera ke Barcode">
         </div>
 
+        <!-- Area Hasil Verifikasi -->
+        <div id="verificationResult" class="verification-box"></div>
+
         <div class="form-group">
             <label>Foto Bukti:</label>
             <input type="file" id="photoProof" accept="image/*" capture="environment">
@@ -73,12 +143,30 @@
         // GANTI dengan URL Web App Google Apps Script Anda
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmaQpC2WzS-o91y-GsoPDGcauKbLhsw1UxSdgIQBrSWTCrX0v54060k4BJj5JWubpw/exec';
 
+        // MOCK DATABASE DARI GOOGLE SHEETS (Master Data Material)
+        const masterData = [
+            { nama: "Karton GSS", kode: "6272518181" },
+            { nama: "Karton SM", kode: "216281286" }
+        ];
+
         // Inisialisasi html5-qrcode
         const html5QrcodeScanner = new Html5QrcodeScanner(
             "reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
 
         function onScanSuccess(decodedText, decodedResult) {
             document.getElementById('barcodeResult').value = decodedText;
+            
+            // Proses Verifikasi
+            const verificationDiv = document.getElementById('verificationResult');
+            const match = masterData.find(item => item.kode === decodedText);
+
+            if (match) {
+                verificationDiv.innerHTML = `✅ <strong>Verified:</strong> ${match.nama}`;
+                verificationDiv.className = 'verification-box success-box';
+            } else {
+                verificationDiv.innerHTML = `❌ <strong>Tidak Dikenali:</strong> Data tidak ada di sistem!`;
+                verificationDiv.className = 'verification-box error-box';
+            }
         }
 
         html5QrcodeScanner.render(onScanSuccess);
@@ -136,6 +224,7 @@
                         // Reset Form
                         document.getElementById('barcodeResult').value = '';
                         photoInput.value = '';
+                        document.getElementById('verificationResult').className = 'verification-box'; // Sembunyikan box verifikasi
                     } else {
                         statusDiv.innerHTML = 'Gagal menyimpan: ' + result.message;
                         statusDiv.className = 'error';
