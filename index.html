@@ -274,6 +274,19 @@
         // GANTI dengan URL Web App Google Apps Script Anda
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmaQpC2WzS-o91y-GsoPDGcauKbLhsw1UxSdgIQBrSWTCrX0v54060k4BJj5JWubpw/exec';
 
+        // --- FITUR TOGGLE PASSWORD ---
+        function togglePassword() {
+            const pwdInput = document.getElementById('loginPassword');
+            const toggleIcon = document.querySelector('.toggle-password');
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                toggleIcon.textContent = '🙈';
+            } else {
+                pwdInput.type = 'password';
+                toggleIcon.textContent = '👁️';
+            }
+        }
+
         // --- FITUR LOGIN ---
         async function doLogin() {
             const nik = document.getElementById('loginNik').value;
