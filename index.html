@@ -15,16 +15,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #0ea5e9;
-            --primary-hover: #0284c7;
-            --success: #10b981;
-            --error: #ef4444;
-            --surface: #ffffff;
-            --background: #f1f5f9;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #059669;
+            --error: #dc2626;
             --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-            --radius: 12px;
+            --text-muted: #475569;
+            --radius: 24px;
+            --glass-bg: rgba(255, 255, 255, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
         }
         
         body { 
@@ -32,134 +32,244 @@
             padding: 20px 16px; 
             max-width: 480px; 
             margin: auto; 
-            background-color: var(--background);
+            background: #e0c3fc;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(190, 100%, 80%, 1) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, hsla(240, 100%, 85%, 1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, hsla(320, 100%, 85%, 1) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, hsla(150, 100%, 80%, 1) 0px, transparent 50%);
+            background-attachment: fixed;
             color: var(--text-main);
+            min-height: 100vh;
+            box-sizing: border-box;
         }
         .container {
-            background: var(--surface);
-            padding: 24px;
+            background: rgba(255, 255, 255, 0.35);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            padding: 32px 24px;
             border-radius: var(--radius);
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.05);
+            box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255,255,255,0.6);
+            border: 1px solid var(--glass-border);
             margin-bottom: 20px;
         }
         .header-container {
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 24px;
+            margin-bottom: 30px;
         }
         .header-logo {
-            height: 36px;
+            height: 42px;
             width: auto;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
         }
-        h2 {
+        h2, h3 {
             text-align: center;
-            margin-top: 0;
-            margin-bottom: 24px;
             margin: 0;
+            margin-bottom: 24px;
             font-size: 1.5rem;
+            font-weight: 700;
             color: var(--text-main);
+            letter-spacing: -0.5px;
         }
         #reader { 
             width: 100%; 
-            margin-bottom: 20px; 
-            border: 2px dashed var(--border) !important;
-            border-radius: var(--radius);
+            margin-bottom: 24px; 
+            border: none !important;
+            border-radius: 20px;
             overflow: hidden;
+            background: rgba(0,0,0,0.03);
+            box-shadow: inset 0 0 0 1px var(--glass-border), 0 8px 24px rgba(0,0,0,0.05);
         }
         #reader button {
-            background-color: var(--primary);
-            color: white;
-            border-radius: 6px;
+            background: var(--glass-bg);
+            color: var(--primary);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
             padding: 8px 16px;
-            border: none;
             cursor: pointer;
             margin: 10px;
+            font-weight: 600;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
-        .form-group { margin-bottom: 15px; }
+        .form-group { margin-bottom: 18px; }
         label { 
             font-weight: 600; 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             display: block; 
-            margin-bottom: 6px;
-            font-size: 0.9rem;
-            color: var(--text-main);
+            margin-bottom: 8px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
         }
         input[type="text"], input[type="file"], input[type="date"], input[type="email"], input[type="password"] { 
             width: 100%; 
-            padding: 12px; 
+            padding: 14px 16px; 
             box-sizing: border-box;
-            border: 1px solid var(--border);
-            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
             font-family: inherit;
             font-size: 0.95rem;
-            transition: border-color 0.2s;
+            background: rgba(255, 255, 255, 0.4);
+            color: var(--text-main);
+            backdrop-filter: blur(10px);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+            transition: all 0.3s ease;
         }
-        input[type="text"]:focus, input[type="file"]:focus {
+        input[type="text"]:focus, input[type="file"]:focus, input[type="date"]:focus, input[type="email"]:focus, input[type="password"]:focus {
             outline: none;
-            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.7);
+            border-color: rgba(255, 255, 255, 0.9);
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.02), 0 0 0 4px rgba(255,255,255,0.4);
+        }
+        .password-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .password-container input {
+            padding-right: 45px;
+        }
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            user-select: none;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .toggle-password:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: scale(1.05);
         }
         button { 
             width: 100%; 
-            padding: 14px; 
-            background-color: var(--primary); 
-            color: white; 
-            border: none; 
-            border-radius: 8px; 
+            padding: 16px; 
+            background: rgba(255, 255, 255, 0.5); 
+            color: var(--primary); 
+            border: 1px solid var(--glass-border); 
+            border-radius: 16px; 
             font-size: 16px; 
             cursor: pointer;
-            font-weight: 600;
-            transition: background-color 0.2s;
+            font-weight: 700;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             margin-top: 10px;
         }
         button:hover:not(:disabled) {
-            background-color: var(--primary-hover);
+            background: rgba(255, 255, 255, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
         }
-        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        #loginBtn, #sendEmailBtn {
+            background: linear-gradient(135deg, var(--primary) 0%, #6366f1 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+        }
+        #loginBtn:hover:not(:disabled), #sendEmailBtn:hover:not(:disabled) {
+            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.5);
+            background: linear-gradient(135deg, var(--primary-hover) 0%, #4f46e5 100%);
+        }
+        button:disabled { 
+            background: rgba(255, 255, 255, 0.3) !important; 
+            color: #94a3b8 !important;
+            box-shadow: none !important;
+            cursor: not-allowed; 
+            border: 1px solid rgba(255, 255, 255, 0.4) !important;
+        }
         #status { margin-top: 15px; font-weight: bold; text-align: center; }
         .success { color: var(--success); }
         .error { color: var(--error); }
         
-        /* Gaya untuk Box Verifikasi */
         .verification-box { 
-            padding: 12px; 
-            margin-bottom: 15px; 
-            border-radius: 8px; 
+            padding: 16px; 
+            margin-bottom: 20px; 
+            border-radius: 16px; 
             display: none; 
             font-size: 0.95rem; 
             text-align: center; 
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
-        .verification-box.success-box { display: block; background-color: #d1fae5; color: #065f46; border: 1px solid var(--success); }
-        .verification-box.error-box { display: block; background-color: #fee2e2; color: #991b1b; border: 1px solid var(--error); }
+        .verification-box.success-box { display: block; background-color: rgba(209, 250, 229, 0.85); color: #064e3b; border: 1px solid rgba(16, 185, 129, 0.5); }
+        .verification-box.error-box { display: block; background-color: rgba(254, 226, 226, 0.85); color: #7f1d1d; border: 1px solid rgba(239, 68, 68, 0.5); }
 
-        /* Gaya Menu Tab & History */
-        .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
-        .tab-btn { margin-top: 0; background-color: #e2e8f0; color: var(--text-main); flex: 1; border-radius: 8px; }
-        .tab-btn.active { background-color: var(--primary); color: white; }
+        .tabs { 
+            display: flex; gap: 8px; margin-bottom: 24px; 
+            background: rgba(255,255,255,0.25); 
+            padding: 6px; 
+            border-radius: 20px; 
+            border: 1px solid var(--glass-border); 
+        }
+        .tab-btn { 
+            margin-top: 0; 
+            padding: 12px; 
+            background: transparent; 
+            border: none; 
+            box-shadow: none; 
+            border-radius: 14px; 
+            color: var(--text-muted); 
+            font-weight: 600; 
+        }
+        .tab-btn.active { 
+            background: #ffffff; 
+            color: var(--primary); 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+        }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
-        .search-filter-container { display: flex; gap: 10px; margin-bottom: 15px; }
+        .search-filter-container { display: flex; gap: 12px; margin-bottom: 20px; }
         .search-filter-container input { margin-bottom: 0; }
         
-        .table-responsive { overflow-x: auto; margin: 15px 0; border: 1px solid var(--border); border-radius: 8px; }
+        .table-responsive { 
+            overflow-x: auto; 
+            margin: 15px 0; 
+            border: 1px solid var(--glass-border); 
+            border-radius: 16px; 
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+        }
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th, td { padding: 10px; border-bottom: 1px solid var(--border); text-align: left; }
-        th { background: #f8fafc; font-weight: 600; }
+        th, td { padding: 14px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.3); text-align: left; }
+        th { background: rgba(255, 255, 255, 0.4); font-weight: 600; color: var(--text-main); }
         
-        .action-bar { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-top: 15px; }
+        .action-bar { 
+            background: rgba(255, 255, 255, 0.35); 
+            padding: 20px; 
+            border-radius: 20px; 
+            border: 1px solid var(--glass-border); 
+            margin-top: 20px; 
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+        }
 
-        /* Pagination */
-        .pagination { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; font-weight: 600; margin-top: 10px; }
-        .pagination button { width: auto; padding: 8px 12px; margin-top: 0; font-size: 0.85rem; background-color: var(--border); color: var(--text-main); }
-        .pagination button:hover:not(:disabled) { background-color: #cbd5e1; }
-        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pagination { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; font-weight: 600; margin-top: 15px; }
+        .pagination button { 
+            width: auto; padding: 10px 16px; margin-top: 0; font-size: 0.85rem; 
+            background: rgba(255, 255, 255, 0.6); color: var(--text-main); 
+            border: 1px solid var(--glass-border); box-shadow: none; 
+        }
+        .pagination button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.9); transform: none; }
 
-        /* Gaya Footer */
         .footer {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 24px;
             font-size: 0.8rem;
-            color: var(--text-muted);
+            font-weight: 500;
+            color: rgba(15, 23, 42, 0.6);
+            text-shadow: 0 1px 2px rgba(255,255,255,0.5);
         }
 
         /* Login View */
@@ -180,7 +290,10 @@
         </div>
         <div class="form-group">
             <label>Password</label>
-            <input type="password" id="loginPassword" placeholder="Masukkan Password">
+            <div class="password-container">
+                <input type="password" id="loginPassword" placeholder="Masukkan Password">
+                <span class="toggle-password" onclick="togglePassword()">👁️</span>
+            </div>
         </div>
         <button id="loginBtn" onclick="doLogin()">Login</button>
         <div id="loginStatus" style="text-align:center; margin-top:15px; font-weight:bold;"></div>
@@ -254,7 +367,7 @@
       </div>
 
         <!-- Footer -->
-        <div class="footer">copyright HitoDev v1.4</div>
+        <div class="footer">copyright @2026 HitoDev v1.4</div>
     </div>
 
     <script>
@@ -319,19 +432,6 @@
                 status.innerHTML = 'Koneksi bermasalah!'; status.className = 'error';
             } finally {
                 btn.disabled = false; btn.innerText = "Login";
-            }
-        }
-
-        // --- FITUR TOGGLE PASSWORD ---
-        function togglePassword() {
-            const pwdInput = document.getElementById('loginPassword');
-            const toggleIcon = document.querySelector('.toggle-password');
-            if (pwdInput.type === 'password') {
-                pwdInput.type = 'text';
-                toggleIcon.textContent = '🙈';
-            } else {
-                pwdInput.type = 'password';
-                toggleIcon.textContent = '👁️';
             }
         }
 
