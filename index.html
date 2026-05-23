@@ -6,6 +6,10 @@
     <title>Scanner Barcode & Foto Bukti</title>
     <!-- Library HTML5-QRCode -->
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0ea5e9">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2415/2415286.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -134,6 +138,19 @@
     </div>
 
     <script>
+        // Registrasi Service Worker untuk PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => {
+                        console.log('ServiceWorker berhasil didaftarkan');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker gagal didaftarkan: ', err);
+                    });
+            });
+        }
+
         // GANTI dengan URL Web App Google Apps Script Anda
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmaQpC2WzS-o91y-GsoPDGcauKbLhsw1UxSdgIQBrSWTCrX0v54060k4BJj5JWubpw/exec';
 
@@ -157,9 +174,16 @@
         // Jalankan penarikan data segera setelah script dijalankan
         fetchMasterData();
 
-        // Inisialisasi html5-qrcode
-        const html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
+        // Inisialisasi html5-qrcode secara langsung (Bypass UI bawaan untuk memaksa kamera belakang)
+        const html5QrCode = new Html5Qrcode("reader");
+        
+        // Mulai kamera dengan video constraint facingMode: "environment" (Kamera Belakang)
+        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess)
+            .catch(err => {
+                console.error("Gagal memulai kamera:", err);
+                document.getElementById('status').innerHTML = 'Gagal mengakses kamera belakang. Pastikan izin kamera diberikan.';
+                document.getElementById('status').className = 'error';
+            });
 
         let isProcessing = false;
         let lastScannedCode = "";
@@ -203,8 +227,6 @@
                 autoSubmitData(text, "Tidak Dikenali");
             }
         }
-
-        html5QrcodeScanner.render(onScanSuccess);
 
         async function autoSubmitData(barcodeText, namaMaterial) {
             isProcessing = true;
