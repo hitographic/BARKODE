@@ -43,8 +43,26 @@ function doPost(e) {
     var data = JSON.parse(e.postData.contents);
     var action = data.action || 'scan'; // Default ke 'scan' jika tidak ada action
 
-    // Buka Spreadsheet untuk mencatat histori scan
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+    // --- ACTION: LOGIN ---
+    if (action === 'login') {
+      var nikInput = data.nik;
+      var passInput = data.password;
+      var sheetUser = ss.getSheetByName("User");
+      if (!sheetUser) return ContentService.createTextOutput(JSON.stringify({status: 'error', message: 'Sheet User tidak ditemukan!'})).setMimeType(ContentService.MimeType.JSON);
+      
+      var userData = sheetUser.getDataRange().getDisplayValues();
+      for (var u = 1; u < userData.length; u++) {
+        if (userData[u][0] === nikInput && userData[u][2] === passInput) {
+          var userNama = userData[u][1];
+          return ContentService.createTextOutput(JSON.stringify({status: 'success', nama: userNama})).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({status: 'error', message: 'NIK atau Password salah!'})).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // --- AKSES SHEET LOG SCAN ---
     var sheetLog = ss.getSheetByName("Log_Scan"); 
     if (!sheetLog) { 
       sheetLog = ss.getSheets()[0]; 
@@ -71,19 +89,22 @@ function doPost(e) {
       var response = { status: 'success', message: 'Data berhasil disimpan!' };
       return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
       
-    } else if (action === 'fetch_today') {
+    // --- ACTION: HISTORY ---
+    } else if (action === 'fetch_history') {
+      var targetDateStr = data.targetDate; // Format 'YYYY-MM-DD'
+      var targetDateObj = targetDateStr ? new Date(targetDateStr) : new Date();
+
       var rawData = sheetLog.getDataRange().getValues();
       var displayData = sheetLog.getDataRange().getDisplayValues();
-      var today = new Date();
       var resultData = [];
       
       // Looping data, mulai dari indeks 1 untuk melewati Header
       for(var i = 1; i < rawData.length; i++) {
         var rowDate = rawData[i][0];
         if (rowDate instanceof Date) {
-          if (rowDate.getDate() === today.getDate() && 
-              rowDate.getMonth() === today.getMonth() && 
-              rowDate.getFullYear() === today.getFullYear()) {
+          if (rowDate.getDate() === targetDateObj.getDate() && 
+              rowDate.getMonth() === targetDateObj.getMonth() && 
+              rowDate.getFullYear() === targetDateObj.getFullYear()) {
             
             resultData.push({
               timestamp: displayData[i][0],
@@ -121,6 +142,11 @@ function doPost(e) {
       MailApp.sendEmail({ to: emailTo, subject: subject, htmlBody: htmlBody });
 
       var response = { status: 'success', message: 'Email berhasil dikirim!' };
+      return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
+
+    } else {
+      // Fallback jika action tidak dikenali
+      var response = { status: 'error', message: 'Action tidak dikenali oleh server.' };
       return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
     }
 
