@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner Barcode & Foto Bukti</title>
+    <!-- Library HTML5-QRCode -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            max-width: 500px; 
+            margin: auto; 
+            background-color: #f9f9f9;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #reader { width: 100%; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px;}
+        input[type="text"], input[type="file"] { 
+            width: 100%; 
+            padding: 10px; 
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button { 
+            width: 100%; 
+            padding: 12px; 
+            background-color: #28a745; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            font-size: 16px; 
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        #status { margin-top: 15px; font-weight: bold; text-align: center; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 style="text-align: center;">Scanner & Upload Bukti</h2>
+
+        <!-- Area Scanner -->
+        <div id="reader"></div>
+
+        <!-- Form Input -->
+        <div class="form-group">
+            <label>Hasil Scan Barcode/QR:</label>
+            <input type="text" id="barcodeResult" readonly placeholder="Arahkan kamera ke Barcode">
+        </div>
+
+        <div class="form-group">
+            <label>Foto Bukti:</label>
+            <input type="file" id="photoProof" accept="image/*" capture="environment">
+        </div>
+
+        <button id="submitBtn" onclick="submitData()">Simpan Data</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        // GANTI dengan URL Web App Google Apps Script Anda
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmaQpC2WzS-o91y-GsoPDGcauKbLhsw1UxSdgIQBrSWTCrX0v54060k4BJj5JWubpw/exec';
+
+        // Inisialisasi html5-qrcode
+        const html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
+
+        function onScanSuccess(decodedText, decodedResult) {
+            document.getElementById('barcodeResult').value = decodedText;
+        }
+
+        html5QrcodeScanner.render(onScanSuccess);
+
+        async function submitData() {
+            const barcodeText = document.getElementById('barcodeResult').value;
+            const photoInput = document.getElementById('photoProof');
+            const statusDiv = document.getElementById('status');
+            const submitBtn = document.getElementById('submitBtn');
+
+            if (!barcodeText) {
+                alert('Silakan scan barcode atau QR code terlebih dahulu.');
+                return;
+            }
+
+            if (photoInput.files.length === 0) {
+                alert('Silakan ambil atau unggah foto bukti terlebih dahulu.');
+                return;
+            }
+
+            // Ubah UI ke status loading
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Mengirim...';
+            statusDiv.innerHTML = 'Sedang memproses dan mengunggah data...';
+            statusDiv.className = '';
+
+            const file = photoInput.files[0];
+            const reader = new FileReader();
+
+            reader.onloadend = async function() {
+                // Menghilangkan prefix "data:image/jpeg;base64," agar aman di-decode oleh GAS
+                const base64String = reader.result.split(',')[1];
+
+                const payload = {
+                    barcodeText: barcodeText,
+                    base64Photo: base64String
+                };
+
+                try {
+                    // Gunakan text/plain untuk mengakali masalah preflight CORS di Google Apps Script
+                    const response = await fetch(GAS_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8',
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+
+                    if (result.status === 'success') {
+                        statusDiv.innerHTML = 'Data dan foto berhasil disimpan!';
+                        statusDiv.className = 'success';
+                        
+                        // Reset Form
+                        document.getElementById('barcodeResult').value = '';
+                        photoInput.value = '';
+                    } else {
+                        statusDiv.innerHTML = 'Gagal menyimpan: ' + result.message;
+                        statusDiv.className = 'error';
+                    }
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    statusDiv.innerHTML = 'Terjadi kesalahan jaringan/server saat mengirim data.';
+                    statusDiv.className = 'error';
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Simpan Data';
+                }
+            };
+
+            // Membaca file gambar sebagai Base64
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>
