@@ -11,9 +11,11 @@ function setupPermissions() {
 function doGet(e) {
   try {
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    // Asumsi: Data Master Material ada di sheet pertama (kiri sendiri)
     // Pastikan Kolom A = Nama Material, Kolom B = Kode Barcode
-    var sheet = ss.getSheets()[0]; 
+    var sheet = ss.getSheetByName("DataMaster"); 
+    if (!sheet) {
+      sheet = ss.getSheets()[0]; // Fallback ke sheet pertama jika "DataMaster" tidak ditemukan
+    }
     var data = sheet.getDataRange().getDisplayValues(); // Gunakan getDisplayValues agar angka dibaca sebagai teks persis seperti di layar
     
     var masterData = [];
