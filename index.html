@@ -130,12 +130,6 @@
         <!-- Area Hasil Verifikasi -->
         <div id="verificationResult" class="verification-box"></div>
 
-        <div class="form-group">
-            <label>Foto Bukti:</label>
-            <input type="file" id="photoProof" accept="image/*" capture="environment">
-        </div>
-
-        <button id="submitBtn" onclick="submitData()">Simpan Data</button>
         <div id="status"></div>
     </div>
 
@@ -167,94 +161,94 @@
         const html5QrcodeScanner = new Html5QrcodeScanner(
             "reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
 
+        let isProcessing = false;
+        let lastScannedCode = "";
+
+        // Fungsi untuk membunyikan suara (Text-to-Speech bawaan browser)
+        function playAudioFeedback(isSuccess) {
+            if ('speechSynthesis' in window) {
+                const text = isSuccess ? 'Oke' : 'Tidak berhasil';
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'id-ID'; // Logat Indonesia
+                utterance.rate = 1.0; 
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
         function onScanSuccess(decodedText, decodedResult) {
-            document.getElementById('barcodeResult').value = decodedText.trim();
+            const text = decodedText.trim();
+            
+            // Cegah trigger berulang saat sedang menyimpan atau jika barcode masih sama
+            if (isProcessing || text === lastScannedCode) return;
+            
+            lastScannedCode = text;
+            document.getElementById('barcodeResult').value = text;
             
             // Proses Verifikasi
             const verificationDiv = document.getElementById('verificationResult');
-            const match = masterData.find(item => item.kode === decodedText.trim());
+            const match = masterData.find(item => item.kode === text);
 
             if (match) {
+                playAudioFeedback(true);
                 verificationDiv.innerHTML = `✅ <strong>Verified:</strong> ${match.nama}`;
                 verificationDiv.className = 'verification-box success-box';
+                
+                // Jalankan simpan data otomatis karena data ditemukan
+                autoSubmitData(text, match.nama);
             } else {
+                playAudioFeedback(false);
                 verificationDiv.innerHTML = `❌ <strong>Tidak Dikenali:</strong> Data tidak ada di sistem!`;
                 verificationDiv.className = 'verification-box error-box';
+                
+                // Reset flag setelah 3 detik agar bisa mencoba scan ulang
+                setTimeout(() => { lastScannedCode = ""; }, 3000);
             }
         }
 
         html5QrcodeScanner.render(onScanSuccess);
 
-        async function submitData() {
-            const barcodeText = document.getElementById('barcodeResult').value;
-            const photoInput = document.getElementById('photoProof');
+        async function autoSubmitData(barcodeText, namaMaterial) {
+            isProcessing = true;
             const statusDiv = document.getElementById('status');
-            const submitBtn = document.getElementById('submitBtn');
 
-            if (!barcodeText) {
-                alert('Silakan scan barcode atau QR code terlebih dahulu.');
-                return;
-            }
-
-            if (photoInput.files.length === 0) {
-                alert('Silakan ambil atau unggah foto bukti terlebih dahulu.');
-                return;
-            }
-
-            // Ubah UI ke status loading
-            submitBtn.disabled = true;
-            submitBtn.innerText = 'Mengirim...';
-            statusDiv.innerHTML = 'Sedang memproses dan mengunggah data...';
+            statusDiv.innerHTML = 'Menyimpan data otomatis...';
             statusDiv.className = '';
 
-            const file = photoInput.files[0];
-            const reader = new FileReader();
-
-            reader.onloadend = async function() {
-                // Menghilangkan prefix "data:image/jpeg;base64," agar aman di-decode oleh GAS
-                const base64String = reader.result.split(',')[1];
-
-                const payload = {
-                    barcodeText: barcodeText,
-                    base64Photo: base64String
-                };
-
-                try {
-                    // Gunakan text/plain untuk mengakali masalah preflight CORS di Google Apps Script
-                    const response = await fetch(GAS_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'text/plain;charset=utf-8',
-                        },
-                        body: JSON.stringify(payload)
-                    });
-
-                    const result = await response.json();
-
-                    if (result.status === 'success') {
-                        statusDiv.innerHTML = 'Data dan foto berhasil disimpan!';
-                        statusDiv.className = 'success';
-                        
-                        // Reset Form
-                        document.getElementById('barcodeResult').value = '';
-                        photoInput.value = '';
-                        document.getElementById('verificationResult').className = 'verification-box'; // Sembunyikan box verifikasi
-                    } else {
-                        statusDiv.innerHTML = 'Gagal menyimpan: ' + result.message;
-                        statusDiv.className = 'error';
-                    }
-                } catch (error) {
-                    console.error('Fetch error:', error);
-                    statusDiv.innerHTML = 'Terjadi kesalahan jaringan/server saat mengirim data.';
-                    statusDiv.className = 'error';
-                } finally {
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = 'Simpan Data';
-                }
+            const payload = {
+                barcodeText: barcodeText,
+                namaMaterial: namaMaterial,
+                base64Photo: "" // Dikosongkan karena tidak perlu foto lagi
             };
 
-            // Membaca file gambar sebagai Base64
-            reader.readAsDataURL(file);
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    statusDiv.innerHTML = 'Tersimpan ke Google Sheet!';
+                    statusDiv.className = 'success';
+                } else {
+                    statusDiv.innerHTML = 'Gagal menyimpan: ' + result.message;
+                    statusDiv.className = 'error';
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                statusDiv.innerHTML = 'Gagal terhubung ke Server.';
+                statusDiv.className = 'error';
+            } finally {
+                // Reset scanner otomatis setelah 2.5 detik agar siap men-scan barang berikutnya
+                setTimeout(() => {
+                    isProcessing = false;
+                    lastScannedCode = "";
+                    document.getElementById('barcodeResult').value = '';
+                    document.getElementById('verificationResult').className = 'verification-box';
+                    statusDiv.innerHTML = '';
+                }, 2500);
+            }
         }
     </script>
 </body>

@@ -37,19 +37,19 @@ function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
     var barcodeText = data.barcodeText;
+    var namaMaterial = data.namaMaterial || "";
     var base64Photo = data.base64Photo;
+    var photoUrl = "";
 
-    // Decode base64 gambar dan ubah menjadi file JPG
-    var decodedData = Utilities.base64Decode(base64Photo);
-    var blob = Utilities.newBlob(decodedData, 'image/jpeg', 'Scan_' + new Date().getTime() + '.jpg');
-
-    // Simpan file ke folder Google Drive
-    var folder = DriveApp.getFolderById(FOLDER_ID);
-    var file = folder.createFile(blob);
-
-    // Atur izin file agar publik bisa melihat dari link
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    var photoUrl = file.getUrl();
+    // Jika ada foto, proses fotonya (sekarang menjadi opsional/dilewati)
+    if (base64Photo && base64Photo !== "") {
+      var decodedData = Utilities.base64Decode(base64Photo);
+      var blob = Utilities.newBlob(decodedData, 'image/jpeg', 'Scan_' + new Date().getTime() + '.jpg');
+      var folder = DriveApp.getFolderById(FOLDER_ID);
+      var file = folder.createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      photoUrl = file.getUrl();
+    }
 
     // Buka Spreadsheet untuk mencatat histori scan
     var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -64,8 +64,8 @@ function doPost(e) {
     }
 
     var timestamp = new Date();
-    // Susunan Kolom: [Waktu, Hasil Scan, Link Foto, Status]
-    sheetLog.appendRow([timestamp, barcodeText, photoUrl, "Tercatat"]);
+    // Susunan Kolom Baru: [Waktu, Hasil Scan, Nama Material, Link Foto, Status]
+    sheetLog.appendRow([timestamp, barcodeText, namaMaterial, photoUrl, "Tercatat Otomatis"]);
 
     var response = {
       status: 'success',
