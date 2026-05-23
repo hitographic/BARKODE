@@ -165,10 +165,9 @@
         let lastScannedCode = "";
 
         // Fungsi untuk membunyikan suara (Text-to-Speech bawaan browser)
-        function playAudioFeedback(isSuccess) {
+        function playAudioFeedback(textToSpeak) {
             if ('speechSynthesis' in window) {
-                const text = isSuccess ? 'Oke' : 'Tidak berhasil';
-                const utterance = new SpeechSynthesisUtterance(text);
+                const utterance = new SpeechSynthesisUtterance(textToSpeak);
                 utterance.lang = 'id-ID'; // Logat Indonesia
                 utterance.rate = 1.0; 
                 window.speechSynthesis.speak(utterance);
@@ -189,19 +188,19 @@
             const match = masterData.find(item => item.kode === text);
 
             if (match) {
-                playAudioFeedback(true);
+                playAudioFeedback(`OK, ${match.nama}`);
                 verificationDiv.innerHTML = `✅ <strong>Verified:</strong> ${match.nama}`;
                 verificationDiv.className = 'verification-box success-box';
                 
                 // Jalankan simpan data otomatis karena data ditemukan
                 autoSubmitData(text, match.nama);
             } else {
-                playAudioFeedback(false);
+                playAudioFeedback("Tidak OK");
                 verificationDiv.innerHTML = `❌ <strong>Tidak Dikenali:</strong> Data tidak ada di sistem!`;
                 verificationDiv.className = 'verification-box error-box';
                 
-                // Reset flag setelah 3 detik agar bisa mencoba scan ulang
-                setTimeout(() => { lastScannedCode = ""; }, 3000);
+                // Jalankan simpan data otomatis meskipun data tidak ditemukan
+                autoSubmitData(text, "Tidak Dikenali");
             }
         }
 
@@ -229,7 +228,7 @@
                 const result = await response.json();
 
                 if (result.status === 'success') {
-                    statusDiv.innerHTML = 'Tersimpan ke Google Sheet!';
+                    statusDiv.innerHTML = 'Data Tersimpan!';
                     statusDiv.className = 'success';
                 } else {
                     statusDiv.innerHTML = 'Gagal menyimpan: ' + result.message;
