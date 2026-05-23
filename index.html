@@ -281,6 +281,19 @@
             const btn = document.getElementById('loginBtn');
             const status = document.getElementById('loginStatus');
 
+        // --- FITUR TOGGLE PASSWORD ---
+        function togglePassword() {
+            const pwdInput = document.getElementById('loginPassword');
+            const toggleIcon = document.querySelector('.toggle-password');
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                toggleIcon.textContent = '🙈';
+            } else {
+                pwdInput.type = 'password';
+                toggleIcon.textContent = '👁️';
+            }
+        }
+
             if (!nik || !pass) { status.innerHTML = 'Mohon isi NIK dan Password'; status.className = 'error'; return; }
             
             btn.disabled = true; btn.innerText = "Memverifikasi..."; status.innerHTML = "";
@@ -297,6 +310,8 @@
                     document.getElementById('app-screen').style.display = 'block';
                     // Auto set default date ke hari ini
                     document.getElementById('historyDate').valueAsDate = new Date();
+                    // MULAI SCANNER SETELAH LAYAR TAMPIL
+                    startScanner();
                 } else {
                     status.innerHTML = result.message; status.className = 'error';
                 }
@@ -331,16 +346,33 @@
         // Jalankan penarikan data segera setelah script dijalankan
         fetchMasterData();
 
-        // Inisialisasi html5-qrcode secara langsung (Bypass UI bawaan untuk memaksa kamera belakang)
-        const html5QrCode = new Html5Qrcode("reader");
-        
-        // Mulai kamera dengan video constraint facingMode: "environment" (Kamera Belakang)
-        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess)
-            .catch(err => {
-                console.error("Gagal memulai kamera:", err);
-                document.getElementById('status').innerHTML = 'Gagal mengakses kamera belakang. Pastikan izin kamera diberikan.';
-                document.getElementById('status').className = 'error';
-            });
+        let html5QrCode;
+        let isCameraOn = false;
+
+        function startScanner() {
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+            if (!isCameraOn) {
+                html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess)
+                    .then(() => {
+                        isCameraOn = true;
+                    })
+                    .catch(err => {
+                        console.error("Gagal memulai kamera:", err);
+                        document.getElementById('status').innerHTML = 'Gagal mengakses kamera belakang. Pastikan izin kamera diberikan.';
+                        document.getElementById('status').className = 'error';
+                    });
+            }
+        }
+
+        function stopScanner() {
+            if (html5QrCode && isCameraOn) {
+                html5QrCode.stop().then(() => {
+                    isCameraOn = false;
+                }).catch(err => console.error("Gagal menghentikan kamera:", err));
+            }
+        }
 
         let isProcessing = false;
         let lastScannedCode = "";
@@ -394,8 +426,11 @@
             document.getElementById('btn-' + tabId).classList.add('active');
 
             if (tabId === 'tab-history') {
+                stopScanner(); // Matikan kamera agar hemat baterai
                 loadHistoryData();
                 generateEmailSubject(); // Otomatis buat Subject Email
+            } else if (tabId === 'tab-scanner') {
+                startScanner(); // Nyalakan kamera saat kembali ke tab scanner
             }
         }
 
