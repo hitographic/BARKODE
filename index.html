@@ -40,6 +40,7 @@
             padding: 24px;
             border-radius: var(--radius);
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
         }
         .header-container {
             display: flex;
@@ -83,7 +84,7 @@
             font-size: 0.9rem;
             color: var(--text-main);
         }
-        input[type="text"], input[type="file"] { 
+        input[type="text"], input[type="file"], input[type="date"], input[type="email"], input[type="password"] { 
             width: 100%; 
             padding: 12px; 
             box-sizing: border-box;
@@ -137,25 +138,57 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
+        .search-filter-container { display: flex; gap: 10px; margin-bottom: 15px; }
+        .search-filter-container input { margin-bottom: 0; }
+        
         .table-responsive { overflow-x: auto; margin: 15px 0; border: 1px solid var(--border); border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         th, td { padding: 10px; border-bottom: 1px solid var(--border); text-align: left; }
         th { background: #f8fafc; font-weight: 600; }
         
-        .search-box { margin-bottom: 15px; position: relative; }
         .action-bar { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border); margin-top: 15px; }
+
+        /* Pagination */
+        .pagination { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; font-weight: 600; margin-top: 10px; }
+        .pagination button { width: auto; padding: 8px 12px; margin-top: 0; font-size: 0.85rem; background-color: var(--border); color: var(--text-main); }
+        .pagination button:hover:not(:disabled) { background-color: #cbd5e1; }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* Gaya Footer */
         .footer {
             text-align: center;
-            margin-top: 30px;
+            margin-top: 20px;
             font-size: 0.8rem;
             color: var(--text-muted);
         }
+
+        /* Login View */
+        #app-screen { display: none; }
     </style>
 </head>
 <body>
-    <div class="container">
+
+    <!-- WADAH LOGIN -->
+    <div id="login-screen" class="container" style="margin-top: 50px;">
+        <div class="header-container" style="margin-bottom: 30px;">
+            <img src="./logo/Logo Barkode Head.png" alt="Logo" class="header-logo" style="height: 48px;">
+        </div>
+        <h3 style="text-align:center; margin-top:0;">Masuk Sistem</h3>
+        <div class="form-group">
+            <label>NIK</label>
+            <input type="text" id="loginNik" placeholder="Masukkan NIK">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword" placeholder="Masukkan Password">
+        </div>
+        <button id="loginBtn" onclick="doLogin()">Login</button>
+        <div id="loginStatus" style="text-align:center; margin-top:15px; font-weight:bold;"></div>
+    </div>
+
+    <!-- WADAH APLIKASI UTAMA -->
+    <div id="app-screen">
+      <div class="container">
         <div class="header-container">
             <img src="./logo/Logo Barkode Head.png" alt="Logo" class="header-logo">
         </div>
@@ -163,7 +196,7 @@
         <!-- Tab Navigation -->
         <div class="tabs">
             <button id="btn-tab-scanner" class="tab-btn active" onclick="switchTab('tab-scanner')">Scanner</button>
-            <button id="btn-tab-history" class="tab-btn" onclick="switchTab('tab-history')">Riwayat Hari Ini</button>
+            <button id="btn-tab-history" class="tab-btn" onclick="switchTab('tab-history')">History</button>
         </div>
 
         <!-- Tab 1: Scanner -->
@@ -177,9 +210,10 @@
             <div id="status"></div>
         </div>
 
-        <!-- Tab 2: Riwayat Hari Ini -->
+        <!-- Tab 2: History -->
         <div id="tab-history" class="tab-content">
-            <div class="search-box">
+            <div class="search-filter-container">
+                <input type="date" id="historyDate" onchange="loadHistoryData()">
                 <input type="text" id="searchInput" placeholder="Pencarian (Nama/Barcode)..." onkeyup="filterTable()">
             </div>
             <div class="table-responsive">
@@ -198,6 +232,13 @@
                 </table>
             </div>
             
+            <!-- Navigasi Halaman -->
+            <div class="pagination">
+                <button id="btnPrev" onclick="prevPage()">Sebelumnya</button>
+                <span id="pageInfo">Halaman 1 dari 1</span>
+                <button id="btnNext" onclick="nextPage()">Selanjutnya</button>
+            </div>
+            
             <div class="action-bar">
                 <label>Kirim Data Terpilih via Email</label>
                 <div class="form-group" style="margin-bottom: 8px;">
@@ -210,6 +251,7 @@
                 <div id="emailStatus" style="margin-top:10px; text-align:center; font-size:0.9rem; font-weight:bold;"></div>
             </div>
         </div>
+      </div>
 
         <!-- Footer -->
         <div class="footer">copyright HitoDev v1.4</div>
@@ -232,9 +274,45 @@
         // GANTI dengan URL Web App Google Apps Script Anda
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmaQpC2WzS-o91y-GsoPDGcauKbLhsw1UxSdgIQBrSWTCrX0v54060k4BJj5JWubpw/exec';
 
+        // --- FITUR LOGIN ---
+        async function doLogin() {
+            const nik = document.getElementById('loginNik').value;
+            const pass = document.getElementById('loginPassword').value;
+            const btn = document.getElementById('loginBtn');
+            const status = document.getElementById('loginStatus');
+
+            if (!nik || !pass) { status.innerHTML = 'Mohon isi NIK dan Password'; status.className = 'error'; return; }
+            
+            btn.disabled = true; btn.innerText = "Memverifikasi..."; status.innerHTML = "";
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'login', nik: nik, password: pass })
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    // Pindah Layar
+                    document.getElementById('login-screen').style.display = 'none';
+                    document.getElementById('app-screen').style.display = 'block';
+                    // Auto set default date ke hari ini
+                    document.getElementById('historyDate').valueAsDate = new Date();
+                } else {
+                    status.innerHTML = result.message; status.className = 'error';
+                }
+            } catch (err) {
+                status.innerHTML = 'Koneksi bermasalah!'; status.className = 'error';
+            } finally {
+                btn.disabled = false; btn.innerText = "Login";
+            }
+        }
+
         // Variabel untuk menampung data dari Google Sheets
         let masterData = [];
         let todayHistoryData = []; // Untuk menampung data riwayat
+        let filteredHistoryData = []; // Data untuk pagination
+        let currentPage = 1;
+        const itemsPerPage = 10;
 
         // Mengambil data master dari Google Sheets saat aplikasi pertama kali dibuka
         async function fetchMasterData() {
@@ -317,24 +395,40 @@
 
             if (tabId === 'tab-history') {
                 loadHistoryData();
+                generateEmailSubject(); // Otomatis buat Subject Email
             }
+        }
+
+        // --- FORMAT SUBJECT EMAIL ---
+        function generateEmailSubject() {
+            const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            const d = new Date(); // Waktu saat ini
+            const date = d.getDate();
+            const month = months[d.getMonth()];
+            const year = d.getFullYear();
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            
+            document.getElementById('emailSubject').value = `Laporan Scan Barcode Tanggal ${date} ${month} ${year} - ${hours}.${minutes} WIB`;
         }
 
         async function loadHistoryData() {
             const tbody = document.getElementById('historyBody');
+            const tDate = document.getElementById('historyDate').value;
             tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Memuat data dari server...</td></tr>';
             
             try {
                 const response = await fetch(GAS_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'fetch_today' })
+                    body: JSON.stringify({ action: 'fetch_history', targetDate: tDate })
                 });
                 const result = await response.json();
                 
                 if (result.status === 'success') {
-                    todayHistoryData = result.data.reverse(); // Balik agar data terbaru di atas
-                    renderTable(todayHistoryData);
+                    // Tambahkan property originalIndex sebelum filter
+                    todayHistoryData = result.data.reverse().map((item, idx) => ({ ...item, originalIndex: idx }));
+                    filterTable(); // Trigger filter yang memanggil pagination
                 } else {
                     tbody.innerHTML = `<tr><td colspan="4" class="error">Gagal: ${result.message}</td></tr>`;
                 }
@@ -343,21 +437,28 @@
             }
         }
 
-        function renderTable(dataArray) {
+        function renderPage() {
             const tbody = document.getElementById('historyBody');
             tbody.innerHTML = '';
             document.getElementById('selectAllBtn').checked = false;
 
-            if (dataArray.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Belum ada data hari ini.</td></tr>';
+            if (filteredHistoryData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Tidak ada data.</td></tr>';
+                document.getElementById('pageInfo').innerText = "Halaman 1 dari 1";
                 return;
             }
 
-            dataArray.forEach((row, index) => {
+            const totalPages = Math.ceil(filteredHistoryData.length / itemsPerPage);
+            document.getElementById('pageInfo').innerText = `Halaman ${currentPage} dari ${totalPages}`;
+
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const pageData = filteredHistoryData.slice(startIndex, startIndex + itemsPerPage);
+
+            pageData.forEach((row) => {
                 const tr = document.createElement('tr');
                 // Menyimpan data asli dalam attribut data untuk keperluan kirim email
                 tr.innerHTML = `
-                    <td><input type="checkbox" class="row-checkbox" data-index="${index}"></td>
+                    <td><input type="checkbox" class="row-checkbox" data-index="${row.originalIndex}"></td>
                     <td style="font-size:0.75rem;">${row.timestamp}</td>
                     <td><strong>${row.nama}</strong><br><span style="font-size:0.75rem; color:#64748b;">${row.barcode}</span></td>
                     <td><span style="font-size:0.8rem; padding:2px 6px; border-radius:4px; background:${row.status === 'Tercatat Otomatis' ? '#d1fae5' : '#e2e8f0'};">${row.status}</span></td>
@@ -368,12 +469,22 @@
 
         function filterTable() {
             const filterText = document.getElementById('searchInput').value.toLowerCase();
-            const filteredData = todayHistoryData.filter(row => {
+            filteredHistoryData = todayHistoryData.filter(row => {
                 return row.nama.toLowerCase().includes(filterText) || 
                        row.barcode.toLowerCase().includes(filterText) ||
                        row.status.toLowerCase().includes(filterText);
             });
-            renderTable(filteredData);
+            currentPage = 1;
+            renderPage();
+        }
+
+        // Control Pagination
+        function prevPage() { 
+            if (currentPage > 1) { currentPage--; renderPage(); } 
+        }
+        function nextPage() { 
+            const totalPages = Math.ceil(filteredHistoryData.length / itemsPerPage);
+            if (currentPage < totalPages) { currentPage++; renderPage(); } 
         }
 
         function toggleSelectAll() {
