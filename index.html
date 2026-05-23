@@ -281,19 +281,6 @@
             const btn = document.getElementById('loginBtn');
             const status = document.getElementById('loginStatus');
 
-        // --- FITUR TOGGLE PASSWORD ---
-        function togglePassword() {
-            const pwdInput = document.getElementById('loginPassword');
-            const toggleIcon = document.querySelector('.toggle-password');
-            if (pwdInput.type === 'password') {
-                pwdInput.type = 'text';
-                toggleIcon.textContent = '🙈';
-            } else {
-                pwdInput.type = 'password';
-                toggleIcon.textContent = '👁️';
-            }
-        }
-
             if (!nik || !pass) { status.innerHTML = 'Mohon isi NIK dan Password'; status.className = 'error'; return; }
             
             btn.disabled = true; btn.innerText = "Memverifikasi..."; status.innerHTML = "";
@@ -319,6 +306,19 @@
                 status.innerHTML = 'Koneksi bermasalah!'; status.className = 'error';
             } finally {
                 btn.disabled = false; btn.innerText = "Login";
+            }
+        }
+
+        // --- FITUR TOGGLE PASSWORD ---
+        function togglePassword() {
+            const pwdInput = document.getElementById('loginPassword');
+            const toggleIcon = document.querySelector('.toggle-password');
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                toggleIcon.textContent = '🙈';
+            } else {
+                pwdInput.type = 'password';
+                toggleIcon.textContent = '👁️';
             }
         }
 
