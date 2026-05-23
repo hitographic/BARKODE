@@ -2,6 +2,11 @@
 const SPREADSHEET_ID = '1aAyfMM_ZyZKeLFyvcyghylDrvkjVGYlQ1Pgwvn9n2pQ';
 const FOLDER_ID = '11K0o9xXPvvAxORY5MlhqtERM8W5lhbls';
 
+// JALANKAN FUNGSI INI SEKALI DARI EDITOR UNTUK MENDAPATKAN IZIN EMAIL
+function setupPermissions() {
+  MailApp.getRemainingDailyQuota();
+}
+
 // Fungsi untuk MENGIRIM data master ke Frontend saat halaman dimuat
 function doGet(e) {
   try {
