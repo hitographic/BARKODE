@@ -143,11 +143,25 @@
         // GANTI dengan URL Web App Google Apps Script Anda
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmaQpC2WzS-o91y-GsoPDGcauKbLhsw1UxSdgIQBrSWTCrX0v54060k4BJj5JWubpw/exec';
 
-        // MOCK DATABASE DARI GOOGLE SHEETS (Master Data Material)
-        const masterData = [
-            { nama: "Karton GSS", kode: "6272518181" },
-            { nama: "Karton SM", kode: "216281286" }
-        ];
+        // Variabel untuk menampung data dari Google Sheets
+        let masterData = [];
+
+        // Mengambil data master dari Google Sheets saat aplikasi pertama kali dibuka
+        async function fetchMasterData() {
+            try {
+                const response = await fetch(GAS_URL);
+                const result = await response.json();
+                if (result.status === 'success') {
+                    masterData = result.data;
+                    console.log("Database Material berhasil dimuat: ", masterData.length, "item");
+                }
+            } catch (error) {
+                console.error("Gagal memuat database material:", error);
+            }
+        }
+        
+        // Jalankan penarikan data segera setelah script dijalankan
+        fetchMasterData();
 
         // Inisialisasi html5-qrcode
         const html5QrcodeScanner = new Html5QrcodeScanner(
